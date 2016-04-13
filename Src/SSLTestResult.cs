@@ -342,7 +342,6 @@ class SSLTestResult {
 		try {
 			ParseServerKeyExchangeInner(hm);
 		} catch (Exception e) {
-			Console.WriteLine("ZOINX: " + e.Message);
 			throw e;
 		}
 	}
@@ -352,6 +351,7 @@ class SSLTestResult {
 		CipherSuite cs;
 		if (!CipherSuite.ALL.TryGetValue(selectedCipherSuite, out cs)) {
 			unknownSKE = true;
+			hm.Close(true);
 			return;
 		}
 		if (cs.IsDHE) {
@@ -507,7 +507,6 @@ class SSLTestResult {
 			 */
 			hm.ReadBlobVar(2);
 		} else {
-			Console.WriteLine("ZOINX: suite=0x{0:X4}", selectedCipherSuite);
 			throw new IOException("Unexpected ServerKeyExchange");
 		}
 		hm.Close();

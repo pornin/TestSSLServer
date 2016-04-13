@@ -138,6 +138,19 @@ Options are:
    In the output report, include the full server certificate(s) in PEM
    format.
 
+ - `-t delay`
+
+   Set the timeout delay (in seconds). This timeout is applied when
+   waiting for response bytes from the server, for the SSLv2 test
+   connection, and for the SSLv3/TLS connections until an actual
+   SSL-like answer was obtained (a ServerHello or an alert). If the
+   timeout is reached for SSLv3/TLS, then the server is assumed to
+   implement a non-SSL protocol, and processing stops.
+
+   By default, a 20-second delay is applied, so that connecting to a
+   non-SSL server may not stall for more than 40 seconds. Use 0 to
+   deactivate the timeout (read will block indefinitely).
+
  - `-prox name:port`
 
    Use the specified HTTP proxy to perform connections to the server.
@@ -149,9 +162,24 @@ Options are:
 
  - `-ec`
 
-   Add a "supported curves" extension to the `ClientHello` for all
-   connections. Some servers might not allow negotiation of an
-   elliptic-curve based cipher suite in the absence of the extension.
+   Add a "supported curves" extension to the `ClientHello` for most
+   connections, testing extension-less EC support only at the end of the
+   process. This is the default and it maximizes the chances of
+   detection of elliptic-curve based cipher suites: some servers might
+   not allow negotiation of an EC cipher suite in the absence of the
+   extension.
+
+ - `-noec`
+
+   Do not add a "supported curves" extension in the `ClientHello` for
+   most connections. That extension will be added only for some specific
+   connections at the end, and only if the server still selected some
+   EC-based suites. This option should be used only if a target server
+   appears to be allergic to elliptic curves and refuses to respond in
+   the presence of the "supported curves" extension.
+
+   Using this extension may miss some supported cipher suites, if the
+   server does not support EC-based suites without the client extension.
 
  - `-text fname`
 
@@ -551,6 +579,11 @@ of some kind.
    SK003 warning, since the client has to ask for such curves
    explicitly.
 
+ - **XC001**: At least one of the non-self-issued certificates sent by
+   the server is signed with, as support hash function, a weak or
+   deprecated hash function (MD2, MD5 or SHA-1), or a hash function that
+   was not recognized.
+
 ## Text Output
 
 When use with the `-text` option (or no output option at all),
@@ -713,6 +746,22 @@ clear example of how support for a weak protocol version can be harmful
 even if normal clients do not use it.
 
 Therefore, **all weak cipher suites and keys should be disabled**.
+
+### Un-warned Conditions
+
+TestSSLServer's warnings are supposed to point at conditions for which
+an actual vulnerability or possible weakness has been demonstrated. It
+won't warn about configurations that are merely unfashionable. The most
+conspicuous example is cipher suites that use MD5. MD5 is very weak with
+regards to _collisions_; but when a cipher suite uses MD5 (e.g.
+`RSA_WITH_RC4_128_MD5`), it does so as part of HMAC, and there is no
+known way to break HMAC/MD5. Therefore, TestSSLServer does not emit a
+warning for MD5 usage in a cipher suite, even though some other
+SSL-testing tools may give a "bad grade" when MD5 is encountered.
+
+`RSA_WITH_RC4_128_MD5` would still get a warning, though, because of
+its use of RC4. And use of MD5 in the signature of a certificate would
+also be reported, because that one can be unsafe.
 
 ### Untested Conditions
 

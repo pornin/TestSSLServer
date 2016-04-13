@@ -26,11 +26,15 @@ class TestSSLServer {
 		Console.WriteLine(
 "  -certs            include full certificates in output");
 		Console.WriteLine(
+"  -t delay          set read timeout (in seconds) for non-SSL detection");
+		Console.WriteLine(
 "  -prox name:port   connect through HTTP proxy");
 		Console.WriteLine(
 "  -proxssl          use SSL/TLS to connect to proxy");
 		Console.WriteLine(
 "  -ec               add a 'supported curves' extension for all connections");
+		Console.WriteLine(
+"  -noec             try connecting without a 'supported curves' extension");
 		Console.WriteLine(
 "  -text fname       write text report in file 'fname' ('-' = stdout)");
 		Console.WriteLine(
@@ -56,6 +60,8 @@ class TestSSLServer {
 		string proxString = null;
 		string textOut = null;
 		string jsonOut = null;
+		int rtm = 20000;
+		ft.AddECExt = true;
 		for (int i = 0; i < args.Length; i ++) {
 			string a = args[i];
 			switch (a.ToLowerInvariant()) {
@@ -107,6 +113,22 @@ class TestSSLServer {
 			case "--with-certificates":
 				withCerts = true;
 				break;
+			case "-t":
+			case "--read-timeout":
+				if (++ i >= args.Length) {
+					Usage();
+				}
+				if (!Int32.TryParse(args[i], out rtm)) {
+					Usage();
+				}
+				if (rtm <= 0) {
+					rtm = -1;
+				} else if (rtm > Int32.MaxValue / 1000) {
+					rtm = -1;
+				} else {
+					rtm *= 1000;
+				}
+				break;
 			case "-prox":
 			case "--proxy":
 				if (++ i >= args.Length) {
@@ -121,6 +143,10 @@ class TestSSLServer {
 			case "-ec":
 			case "--with-ec-ext":
 				ft.AddECExt = true;
+				break;
+			case "-noec":
+			case "--without-ec-ext":
+				ft.AddECExt = false;
 				break;
 			case "-text":
 			case "--text-output":
@@ -156,6 +182,7 @@ class TestSSLServer {
 				Usage();
 			}
 		}
+		ft.ReadTimeout = rtm;
 		if (proxString != null) {
 			int j = proxString.IndexOf(':');
 			if (j > 0) {

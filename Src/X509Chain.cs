@@ -216,7 +216,9 @@ class X509Chain {
 			IDictionary<string, bool> sghf =
 				new SortedDictionary<string, bool>(
 					StringComparer.Ordinal);
-			sghf[lc.HashAlgorithm] = true;
+			if (!lc.SelfIssued) {
+				sghf[lc.HashAlgorithm] = true;
+			}
 			for (int i = 1; i < n; i ++) {
 				X509Cert ca = elementsRev[i];
 				if (!ca.SelfIssued) {

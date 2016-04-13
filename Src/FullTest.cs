@@ -152,6 +152,23 @@ class FullTest {
 		}
 	}
 
+	/*
+	 * The read timeout on server's responses, in milliseconds.
+	 * Default is -1, which means "infinite". The read timeout is
+	 * applied only on SSL 3.x connections as long as no ServerHello
+	 * or SSL alert was received; it is meant to quickly detect cases
+	 * where the server does not talk SSL/TLS at all, but will block
+	 * indefinitely upon an incoming client connection.
+	 */
+	internal int ReadTimeout {
+		get {
+			return readTimeout;
+		}
+		set {
+			readTimeout = value;
+		}
+	}
+
 	bool verbose;
 	int minVersion;
 	int maxVersion;
@@ -163,11 +180,13 @@ class FullTest {
 	string proxName;
 	int proxPort;
 	bool proxSSL;
+	int readTimeout;
 
 	Report rp;
 	SSLTestBuilder tb;
 	bool withExts;
 	bool gotSSLAnswer;
+	bool gotReadTimeout;
 	bool serverCompress;
 	int sslAlert;
 	List<int> csl;
@@ -192,6 +211,7 @@ class FullTest {
 		serverPort = 443;
 		explicitSNI = null;
 		allSuites = false;
+		readTimeout = -1;
 		proxName = null;
 		proxPort = 3128;
 		proxSSL = false;
@@ -325,15 +345,15 @@ class FullTest {
 		 */
 		for (;;) {
 			maxRecordLen = 8192;
-			if (TryConnect()) {
+			if (TryConnect() || gotReadTimeout) {
 				break;
 			}
 			maxRecordLen = 1024;
-			if (TryConnect()) {
+			if (TryConnect() || gotReadTimeout) {
 				break;
 			}
 			maxRecordLen = 256;
-			if (TryConnect()) {
+			if (TryConnect() || gotReadTimeout) {
 				break;
 			}
 			int v = tb.MaxVersion;
@@ -354,8 +374,12 @@ class FullTest {
 			if (gotSSLAnswer && sslAlert >= 0) {
 				throw new SSLAlertException(sslAlert);
 			} else {
-				throw new Exception("Could not initiate a"
-					+ " handshake (not SSL/TLS?)");
+				string msg = "Could not initiate a handshake"
+					+ " (not SSL/TLS?)";
+				if (gotReadTimeout) {
+					msg += " [read timeout]";
+				}
+				throw new Exception(msg);
 			}
 		}
 		if (maxRecordLen < 8192) {
@@ -396,17 +420,44 @@ class FullTest {
 
 		/*
 		 * At that point, if the server used an EC-based cipher
-		 * suite, then it selected curves itself (unless we forced
-		 * an explicit extension). We now want to use the Supported
-		 * Elliptic Curves extension to enumerate the curves that
-		 * the server supports.
+		 * suite, and we did not present a Supported Elliptic
+		 * Curves extension, then the server selected the
+		 * curve(s) all by itself. If we always presented that
+		 * extension, then we want to try talking to the server
+		 * without it, to see if it accepts doing EC at all
+		 * without the extension, and, if yes, what curve it may
+		 * use in that case.
 		 */
+		int[] spontaneousEC;
 		SSLCurve[] spontaneousNamedCurves;
-		if (addECExt) {
-			spontaneousNamedCurves = new SSLCurve[0];
+		if (addECExt && withExts && maxECVersion >= 0) {
+			if (verbose) {
+				Console.WriteLine("[spontaneous EC support,"
+					+ " version={0}, {1} suite(s)]",
+					M.VersionString(maxECVersion),
+					suppEC.Length);
+			}
+			IDictionary<int, SSLCurve> oldNamedCurves = namedCurves;
+			namedCurves = new SortedDictionary<int, SSLCurve>();
+			tb.MaxVersion = maxECVersion;
+			tb.SupportedCurves = null;
+			spontaneousEC = GetSupportedCipherSuites(suppEC);
+			spontaneousNamedCurves = M.ToValueArray(namedCurves);
+			foreach (int s in namedCurves.Keys) {
+				oldNamedCurves[s] = namedCurves[s];
+			}
+			namedCurves = oldNamedCurves;
+			if (verbose) {
+				Console.WriteLine();
+			}
 		} else {
+			spontaneousEC = suppEC;
 			spontaneousNamedCurves = M.ToValueArray(namedCurves);
 		}
+
+		/*
+		 * We now try to enumerate all supported EC curves.
+		 */
 		if (withExts && maxECVersion >= 0) {
 			tb.MaxVersion = maxECVersion;
 			tb.CipherSuites = suppEC;
@@ -466,6 +517,7 @@ class FullTest {
 		rp.MinECSize = minECSize;
 		rp.MinECSizeExt = minECSizeExt;
 		rp.NamedCurves = M.ToValueArray(namedCurves);
+		rp.SpontaneousEC = spontaneousEC;
 		rp.SpontaneousNamedCurves = spontaneousNamedCurves;
 		rp.CurveExplicitPrime = curveExplicitPrime;
 		rp.CurveExplicitChar2 = curveExplicitChar2;
@@ -504,6 +556,13 @@ class FullTest {
 		}
 	}
 
+	/*
+	 * Returned value:
+	 *   1  handshake succeeded (at least, a ServerHello was obtained)
+	 *   0  failure
+	 *  -1  failure with read timeout (the server does not talk
+	 *      SSL 3.x at all, so we can stop right away)
+	 */
 	bool TryConnect()
 	{
 		int num = tb.ComputeMaxCipherSuites(maxRecordLen);
@@ -531,6 +590,14 @@ class FullTest {
 				}
 				return true;
 			}
+			if (gotReadTimeout) {
+				/*
+				 * If we get a read timeout, then this means
+				 * that the server is not talking SSL 3.x at
+				 * all; we can thus stop right here.
+				 */
+				return false;
+			}
 		}
 		return false;
 	}
@@ -548,6 +615,11 @@ class FullTest {
 			ns = OpenConnection();
 			if (verbose) {
 				Console.Write(".");
+			}
+			if (!gotSSLAnswer && readTimeout > 0) {
+				RTStream rns = new RTStream(ns);
+				rns.RTimeout = readTimeout;
+				ns = rns;
 			}
 			try {
 				bool hasECExt = tb.SupportedCurves != null
@@ -581,6 +653,9 @@ class FullTest {
 				gotSSLAnswer = true;
 				sslAlert = ae.Alert;
 				return null;
+			} catch (ReadTimeoutException) {
+				gotReadTimeout = true;
+				return null;
 			} catch (Exception) {
 				return null;
 			}
@@ -605,6 +680,11 @@ class FullTest {
 		Stream ns = null;
 		try {
 			ns = OpenConnection();
+			if (readTimeout > 0) {
+				RTStream rns = new RTStream(ns);
+				rns.RTimeout = readTimeout;
+				ns = rns;
+			}
 			SSL2 v2 = SSL2.TestServer(ns);
 			if (v2 != null) {
 				rp.SSLv2CipherSuites = v2.CipherSuites;

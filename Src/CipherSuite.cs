@@ -362,7 +362,7 @@ class CipherSuite {
 				break;
 			}
 			line = line.Trim();
-			if (line.Length == 0) {
+			if (line.Length == 0 || line.StartsWith("#")) {
 				continue;
 			}
 			CipherSuite cs = new CipherSuite(line);
@@ -797,6 +797,21 @@ C0AC 3 - e e ECDHE_ECDSA_WITH_AES_128_CCM
 C0AD 3 - e e ECDHE_ECDSA_WITH_AES_256_CCM
 C0AE 3 - e e ECDHE_ECDSA_WITH_AES_128_CCM_8
 C0AF 3 - e e ECDHE_ECDSA_WITH_AES_256_CCM_8
+
+# These ones are from draft-mavrogiannopoulos-chacha-tls-01
+# Apparently some servers (Google...) deployed them.
+# We use the suffix '_OLD' to signify that they are not registered at
+# the IANA (and probably will never be).
+CC12 3 - - r RSA_WITH_CHACHA20_POLY1305_OLD
+CC13 3 - e r ECDHE_RSA_WITH_CHACHA20_POLY1305_OLD
+CC14 3 - e e ECDHE_ECDSA_WITH_CHACHA20_POLY1305_OLD
+CC15 3 - d r DHE_RSA_WITH_CHACHA20_POLY1305_OLD
+CC16 3 - d p DHE_PSK_WITH_CHACHA20_POLY1305_OLD
+CC17 3 - - p PSK_WITH_CHACHA20_POLY1305_OLD
+CC18 3 - e p ECDHE_PSK_WITH_CHACHA20_POLY1305_OLD
+CC19 3 - - q RSA_PSK_WITH_CHACHA20_POLY1305_OLD
+
+# Defined in draft-ietf-tls-chacha20-poly1305-04
 CCA8 3 - e r ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
 CCA9 3 - e e ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
 CCAA 3 - d r DHE_RSA_WITH_CHACHA20_POLY1305_SHA256

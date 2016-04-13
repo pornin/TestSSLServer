@@ -212,6 +212,20 @@ class Report {
 	}
 
 	/*
+	 * List of EC suites that the server supports when the client
+	 * does not send a Supported Elliptic Curves extension. The
+	 * list is not in any specific order.
+	 */
+	internal int[] SpontaneousEC {
+		get {
+			return spontaneousEC;
+		}
+		set {
+			spontaneousEC = value;
+		}
+	}
+
+	/*
 	 * Named curves spontaneously used by the server for ECDH
 	 * parameters. These are the curves that the server elected to
 	 * use in the absence of a "supported elliptic curves" extension
@@ -313,6 +327,7 @@ class Report {
 	int minECSize;
 	int minECSizeExt;
 	SSLCurve[] namedCurves;
+	int[] spontaneousEC;
 	SSLCurve[] spontaneousNamedCurves;
 	int curveExplicitPrime;
 	int curveExplicitChar2;
@@ -476,6 +491,27 @@ class Report {
 			warnings["RN001"] = "Server does not support"
 				+ " secure renegotiation.";
 		}
+		bool hasBadSignHash = false;
+		foreach (X509Chain xchain in chains.Values) {
+			string[] shs = xchain.SignHashes;
+			if (shs == null) {
+				continue;
+			}
+			foreach (string sh in shs) {
+				switch (sh) {
+				case "MD2":
+				case "MD5":
+				case "SHA-1":
+				case "UNKNOWN":
+					hasBadSignHash = true;
+					break;
+				}
+			}
+		}
+		if (hasBadSignHash) {
+			warnings["XC001"] = "Server certificate was signed with"
+				+ " a weak/deprecated/unknown hash function.";
+		}
 	}
 
 	/*
@@ -592,6 +628,10 @@ class Report {
 		if (minECSizeExt > 0) {
 			w.WriteLine("Minimum EC size (with extension): {0}",
 				minECSizeExt);
+			if (minECSize == 0) {
+				w.WriteLine("Server does not use EC without"
+					+ " the client extension");
+			}
 		}
 		if (namedCurves != null && namedCurves.Length > 0) {
 			w.WriteLine("Supported curves (size and name)"
