@@ -264,6 +264,12 @@ class SSLTestResult {
 				case M.EXT_RENEGOTIATION_INFO:
 					ParseRenegInfo(sh);
 					break;
+				case M.EXT_SUPPORTED_CURVES:
+					ParseSupportedCurves(sh);
+					break;
+				case M.EXT_SUPPORTED_EC_POINTS:
+					ParseSupportedECPoints(sh);
+					break;
 				default:
 					throw new Exception(
 						"Unknown extension: "
@@ -319,6 +325,26 @@ class SSLTestResult {
 	void ParseRenegInfo(HMParser sh)
 	{
 		renegInfo = sh.ReadBlobVar(1);
+	}
+
+	void ParseSupportedCurves(HMParser sh)
+	{
+		/*
+		 * TODO: see if we should parse this information. The
+		 * server sends that extension after seeing the client's
+		 * ClientHello, so it may "lie" about its actual abilities.
+		 */
+		sh.SkipRemainder();
+	}
+
+	void ParseSupportedECPoints(HMParser sh)
+	{
+		/*
+		 * TODO: see if we should parse this information. The
+		 * server sends that extension after seeing the client's
+		 * ClientHello, so it may "lie" about its actual abilities.
+		 */
+		sh.SkipRemainder();
 	}
 
 	void ParseCertificate(HMParser hm)
