@@ -2,7 +2,7 @@
 
 CSC=$(which mono-csc || which dmcs || echo "none")
 
-if [[ $CSC == "none" ]]; then
+if [ $CSC = "none" ]; then
 	echo "Error: Please install mono-devel."
 	exit 1
 fi
