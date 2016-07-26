@@ -22,6 +22,7 @@ class SSL2 {
 	 * not support that, instead of stalling for more data from the
 	 * client.
 	 */
+	/* obsolete
 	internal static byte[] SSL2_CLIENT_HELLO = {
 		0x80, 0x2E,              // header (record length)
 		0x01,                    // message type (CLIENT HELLO)
@@ -41,6 +42,7 @@ class SSL2 {
 		0x54, 0x54, 0x54, 0x54,
 		0x54, 0x54, 0x54, 0x54
 	};
+	*/
 
 	/*
 	 * Get the cipher suites from the ServerHello. The list presumably
@@ -119,11 +121,86 @@ class SSL2 {
 	internal static SSL2 TestServer(Stream ss)
 	{
 		try {
+			byte[] hello = MakeHelloV2Format(
+				0x0002, 0, CipherSuite.SSL2_SUITES);
+			ss.Write(hello, 0, hello.Length);
+			/* obsolete
 			ss.Write(SSL2_CLIENT_HELLO,
 				0, SSL2_CLIENT_HELLO.Length);
+			*/
 			return new SSL2(ss);
 		} catch (Exception) {
 			return null;
 		}
+	}
+
+	/*
+	 * Make a ClientHello for a specific protocol version, in the
+	 * format of a SSL 2.0 ClientHello. The list of cipher suites is
+	 * provided, and may contain both V2 (24-bit) and V3 (16-bit)
+	 * cipher suites.
+	 *
+	 * If maxLength is positive, then it indicates a maximum
+	 * length for the hello message (including record header); the
+	 * provided list of cipher suites may be truncated in order to
+	 * fit that length.
+	 */
+	internal static byte[] MakeHelloV2Format(
+		int version, int maxLength, int[] cipherSuites)
+	{
+		int numcs;
+		if (maxLength > 0) {
+			numcs = Math.Min(cipherSuites.Length,
+				(maxLength - 27) / 3);
+		} else {
+			numcs = cipherSuites.Length;
+		}
+		if (numcs <= 0) {
+			throw new Exception("Invalid V2 hello length");
+		}
+		byte[] hello = new byte[27 + 3 * numcs];
+		if (hello.Length > 32769) {
+			throw new Exception("Invalid V2 hello length");
+		}
+		int off = 0;
+
+		/* header (record length) */
+		int rh = 0x8000 | (hello.Length - 2);
+		hello[off ++] = (byte)(rh >> 8);
+		hello[off ++] = (byte)rh;
+
+		/* message type (CLIENT HELLO) */
+		hello[off ++] = 0x01;
+
+		/* version */
+		hello[off ++] = (byte)(version >> 8);
+		hello[off ++] = (byte)version;
+
+		/* cipher specs list length */
+		hello[off ++] = (byte)((numcs * 3) >> 8);
+		hello[off ++] = (byte)(numcs * 3);
+
+		/* session ID length */
+		hello[off ++] = 0x00;
+		hello[off ++] = 0x00;
+
+		/* challenge length */
+		hello[off ++] = 0x00;
+		hello[off ++] = 0x10;
+
+		/* cipher suites */
+		for (int i = 0; i < numcs; i ++) {
+			int cs = cipherSuites[i];
+			hello[off ++] = (byte)(cs >> 16);
+			hello[off ++] = (byte)(cs >> 8);
+			hello[off ++] = (byte)cs;
+		}
+
+		/* challenge */
+		for (int i = 0; i < 16; i ++) {
+			hello[off ++] = 0x54;
+		}
+
+		return hello;
 	}
 }

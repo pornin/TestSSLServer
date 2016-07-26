@@ -419,6 +419,14 @@ A single JSON object is produced. It contains the following fields:
  - **secureRenegotiation**: a boolean value, set to `true` if the server
    supports the Secure Renegotiation extension (RFC 5746).
 
+ - **ssl2HelloFormat**: a boolean value, set to `true` if the server
+   supports a ClientHello for SSLv3+ sent in SSLv2 format. Some old
+   clients support for SSLv2 and SSLv3, and send the ClientHello in
+   SSLv2 format. Supporting this format for the ClientHello only is not
+   a problem (contrary to full SSLv2 support), but it is recommended to
+   ultimately drop that format, notably because the SSLv2 format has no
+   room for TLS extensions.
+
  - **minDHSize**: the size (in bits) of the smallest Diffie-Hellman
    modulus that the server is willing to use in a cipher suite that uses
    ephemeral DH parameters. This field is present only if such a

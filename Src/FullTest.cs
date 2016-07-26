@@ -401,6 +401,12 @@ class FullTest {
 		 * which EC-based cipher suites are supported, and
 		 * extract all supported EC-based cipher suites for
 		 * that version.
+		 *
+		 * For each such protocol version, we also try connecting
+		 * with a ClientHello in V2 format; we do so while ensuring
+		 * that the total hello length is no more than 127 bytes,
+		 * for maximum interoperability. Note that the V2 format
+		 * has no room for any extension.
 		 */
 		int maxECVersion = -1;
 		int[] suppEC = null;
@@ -416,6 +422,16 @@ class FullTest {
 				maxECVersion = v;
 				suppEC = ecs;
 			}
+
+			/*
+			 * Check V2 format for ClientHello.
+			 */
+			int savedRV = tb.RecordVersion;
+			tb.RecordVersion = M.SSLv20;
+			if (DoConnect() != null) {
+				rp.SupportsV2Hello = true;
+			}
+			tb.RecordVersion = savedRV;
 		}
 
 		/*

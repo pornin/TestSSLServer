@@ -260,10 +260,16 @@ class SSLTestBuilder {
 		/*
 		 * Send ClientHello.
 		 */
-		byte[] ch = MakeClientHello(cipherSuites);
 		rec.SetOutType(M.HANDSHAKE);
 		rec.SetOutVersion(recordVersion);
-		rec.Write(ch);
+		if (recordVersion < M.SSLv30) {
+			byte[] chv2 = SSL2.MakeHelloV2Format(
+				maxVersion, 127, cipherSuites);
+			rec.RawWrite(chv2);
+		} else {
+			byte[] ch = MakeClientHello(cipherSuites);
+			rec.Write(ch);
+		}
 		rec.Flush();
 
 		/*

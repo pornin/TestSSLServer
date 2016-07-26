@@ -99,9 +99,9 @@ class SSLRecord : Stream {
 			M.Enc16be(outVersion, outBuf, 1);
 			M.Enc16be(outPtr - 5, outBuf, 3);
 			sub.Write(outBuf, 0, outPtr);
-			sub.Flush();
 			outPtr = 5;
 		}
+		sub.Flush();
 	}
 
 	public override void WriteByte(byte b)
@@ -129,6 +129,26 @@ class SSLRecord : Stream {
 				Flush();
 			}
 		}
+	}
+
+	/*
+	 * Raw write: write some data on the underlying stream,
+	 * bypassing the record layer. This is used to send a ClientHello
+	 * in V2 format.
+	 */
+	internal void RawWrite(byte[] buf)
+	{
+		RawWrite(buf, 0, buf.Length);
+	}
+
+	/*
+	 * Raw write: write some data on the underlying stream,
+	 * bypassing the record layer. This is used to send a ClientHello
+	 * in V2 format.
+	 */
+	internal void RawWrite(byte[] buf, int off, int len)
+	{
+		sub.Write(buf, off, len);
 	}
 
 	/*

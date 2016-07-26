@@ -328,6 +328,19 @@ class CipherSuite {
 	internal const int SSL_CK_DES_192_EDE3_CBC_WITH_MD5      = 0x0700C0;
 
 	/*
+	 * The SSL 2.0 suites, in numerical order.
+	 */
+	internal static int[] SSL2_SUITES = {
+		SSL_CK_RC4_128_WITH_MD5,
+		SSL_CK_RC4_128_EXPORT40_WITH_MD5,
+		SSL_CK_RC2_128_CBC_WITH_MD5,
+		SSL_CK_RC2_128_CBC_EXPORT40_WITH_MD5,
+		SSL_CK_IDEA_128_CBC_WITH_MD5,
+		SSL_CK_DES_64_CBC_WITH_MD5,
+		SSL_CK_DES_192_EDE3_CBC_WITH_MD5
+	};
+
+	/*
 	 * Get the name for a SSLv2 cipher suite. If the identifier is
 	 * unknown, then a synthetic name is returned.
 	 */

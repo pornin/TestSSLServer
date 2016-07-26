@@ -82,6 +82,18 @@ class Report {
 	}
 
 	/*
+	 * Support for SSLv3+ with a SSLv2 ClientHello format.
+	 */
+	internal bool SupportsV2Hello {
+		get {
+			return helloV2;
+		}
+		set {
+			helloV2 = value;
+		}
+	}
+
+	/*
 	 * Set to true if we had to shorten our ClientHello messages
 	 * (this indicates a server with a fixed, small buffer for
 	 * incoming ClientHello).
@@ -316,6 +328,7 @@ class Report {
 	string sni;
 	int[] ssl2Suites;
 	X509Chain ssl2Chain;
+	bool helloV2;
 	bool shortHello;
 	bool noExts;
 	IDictionary<int, SupportedCipherSuites> suites;
@@ -618,6 +631,8 @@ class Report {
 		}
 		w.WriteLine("Secure renegotiation support: {0}",
 			doesRenego ? "yes" : "no");
+		w.WriteLine("SSLv2 ClientHello format (for SSLv3+): {0}",
+			helloV2 ? "yes" : "no");
 		if (minDHSize > 0) {
 			w.WriteLine("Minimum DH size: {0}", minDHSize);
 		}
@@ -808,6 +823,7 @@ class Report {
 				serverTimeOffset);
 		}
 		js.AddPair("secureRenegotiation", doesRenego);
+		js.AddPair("ssl2HelloFormat", helloV2);
 		if (minDHSize > 0) {
 			js.AddPair("minDHSize", minDHSize);
 		}
