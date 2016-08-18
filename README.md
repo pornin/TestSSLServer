@@ -552,6 +552,15 @@ of some kind.
    handshake to complete. This is a server flaw that indicates and
    old and unmaintained software base.
 
+ - **PV005**: Server claims to support SSL 2.0, but with no cipher suite.
+
+   This may happen on some servers where SSL 2.0 was not fully
+   deactivated, but all cipher suites were removed from what it
+   supports. The server sends an empty list, so it does not _really_
+   support SSL 2.0, it merely claims to do so. Some other SSL scanning
+   tools wrongly indicate this occurrence as "supports SSL 2.0", which
+   is why this warning is included.
+
  - **RN001**: Server does not support secure renegotiation.
 
    The server does not appear to support the Secure Renegotiation

@@ -97,7 +97,16 @@ class SSL2 {
 		if (len != 11 + certLen + csLen + connIdLen) {
 			throw new IOException("not a SSLv2 server hello");
 		}
-		if (csLen == 0 || csLen % 3 != 0) {
+
+		/*
+		 * Special case: some servers may send a v2 ServerHello
+		 * with an empty list of ciphers! This means that the
+		 * server does not actually support SSLv2, but was
+		 * poorly written. We want to detect that case because
+		 * SSLlabs reports such servers as "supporting SSLv2"
+		 * and it makes people nervous.
+		 */
+		if (csLen % 3 != 0) {
 			throw new IOException("not a SSLv2 server hello");
 		}
 		certificate = new byte[certLen];

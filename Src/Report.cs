@@ -417,8 +417,13 @@ class Report {
 	{
 		warnings = new SortedDictionary<string, string>(
 			StringComparer.Ordinal);
-		if (ssl2Suites != null && ssl2Suites.Length > 0) {
-			warnings["PV002"] = "Server supports SSL 2.0.";
+		if (ssl2Suites != null) {
+			if (ssl2Suites.Length > 0) {
+				warnings["PV002"] = "Server supports SSL 2.0.";
+			} else {
+				warnings["PV005"] = "Server claims to support"
+					+ " SSL 2.0, but with no cipher suite";
+			}
 		}
 		if (suites.ContainsKey(M.SSLv30)) {
 			warnings["PV003"] = "Server supports SSL 3.0.";
