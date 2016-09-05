@@ -174,7 +174,51 @@ class TestSSLServer {
 		if (args.Length == 0 || args.Length > 2) {
 			Usage();
 		}
-		ft.ServerName = args[0];
+
+		/*
+		 * While the parameters should be a _server name_ (and
+		 * optional port), some people instinctively provide an
+		 * "https://" URL. We will support that case.
+		 */
+		string sn = args[0];
+		if (sn.StartsWith("https://")) {
+			sn = sn.Substring(8);
+			int j = sn.IndexOf('/');
+			if (j >= 0) {
+				sn = sn.Substring(0, j);
+			}
+			j = sn.IndexOf('@');
+			if (j >= 0) {
+				sn = sn.Substring(j + 1);
+			}
+		}
+
+		/*
+		 * The "server name" might end with ':' followed by a port
+		 * number (e.g. if it came for a URL, or through creative
+		 * invocation from the user). However, if there are several
+		 * colon characters, then we infer the server name to be
+		 * an explicit IPv6 address, and we do not try to extract
+		 * a port number from it.
+		 */
+		int sj = sn.IndexOf(':');
+		if (sj >= 0 && sj < (sn.Length - 1)
+			&& sn.IndexOf(':', sj + 1) < 0)
+		{
+			try {
+				ft.ServerPort = Int32.Parse(
+					sn.Substring(sj + 1));
+			} catch (Exception) {
+				Usage();
+			}
+			sn = sn.Substring(0, sj);
+		}
+		ft.ServerName = sn;
+
+		/*
+		 * An explicit port number overrides the port value
+		 * extracted from the server name (if applicable).
+		 */
 		if (args.Length == 2) {
 			try {
 				ft.ServerPort = Int32.Parse(args[1]);
@@ -182,6 +226,7 @@ class TestSSLServer {
 				Usage();
 			}
 		}
+
 		ft.ReadTimeout = rtm;
 		if (proxString != null) {
 			int j = proxString.IndexOf(':');
