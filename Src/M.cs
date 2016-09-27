@@ -169,6 +169,38 @@ class M {
 		return sb.ToString();
 	}
 
+	/*
+	 * Hash several values together. This makes an unambiguous
+	 * concatenation.
+	 */
+	internal static string DoSHA1Values(params object[] values)
+	{
+		MemoryStream ms = new MemoryStream();
+		foreach (object obj in values) {
+			byte[] data;
+			if (obj == null) {
+				data = new byte[1];
+				data[0] = 0x00;
+			} else if (obj is int) {
+				data = new byte[5];
+				data[0] = 0x01;
+				Enc32be((int)obj, data, 1);
+			} else if (obj is byte[]) {
+				byte[] buf = (byte[])obj;
+				data = new byte[5 + buf.Length];
+				data[0] = 0x01;
+				Enc32be(buf.Length, data, 1);
+				Array.Copy(buf, 0, data, 5, buf.Length);
+			} else {
+				throw new ArgumentException(
+					"Unsupported object type: "
+					+ obj.GetType().FullName);
+			}
+			ms.Write(data, 0, data.Length);
+		}
+		return DoSHA1(ms.ToArray());
+	}
+
 	internal static int Read1(Stream s)
 	{
 		int x = s.ReadByte();

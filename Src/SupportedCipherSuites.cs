@@ -30,15 +30,37 @@ class SupportedCipherSuites {
 		}
 	}
 
+	internal bool KXReuseDH {
+		get {
+			return kxReuseDH;
+		}
+		set {
+			kxReuseDH = value;
+		}
+	}
+
+	internal bool KXReuseECDH {
+		get {
+			return kxReuseECDH;
+		}
+		set {
+			kxReuseECDH = value;
+		}
+	}
+
 	int[] suites;
 	bool prefClient;
 	bool prefServer;
+	bool kxReuseDH;
+	bool kxReuseECDH;
 
 	internal SupportedCipherSuites(int[] suites)
 	{
 		this.suites = suites;
 		prefClient = false;
 		prefServer = false;
+		kxReuseDH = false;
+		kxReuseECDH = false;
 	}
 
 	/*
@@ -67,6 +89,11 @@ class SupportedCipherSuites {
 		}
 		if (prefClient != scs.prefClient
 			|| prefServer != scs.prefServer)
+		{
+			return false;
+		}
+		if (kxReuseDH != scs.kxReuseDH
+			|| kxReuseECDH != scs.kxReuseECDH)
 		{
 			return false;
 		}

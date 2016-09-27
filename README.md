@@ -432,6 +432,12 @@ A single JSON object is produced. It contains the following fields:
    ephemeral DH parameters. This field is present only if such a
    cipher suite is supported by the server.
 
+ - **kxReuseDH**: a boolean value, set to `true` if the server was
+   detected to reuse DH parameters (for DHE or DH\_anon cipher suites).
+   This field is present only if such a cipher suite is supported by the
+   server. Note that DH parameters reuse is not guaranteed to be
+   detected, especially in some load-balancing setups.
+
  - **minECSize**: the size (in bits) of the smallest elliptic curve that
    the server is willing to use in an ECDHE cipher suite. This field is
    present only if the server supports an ECDHE cipher suite, and takes
@@ -443,6 +449,12 @@ A single JSON object is produced. It contains the following fields:
    that the server accepts to use for an ECDHE cipher suite, in the
    presence of a "supported curve" extension from the client. If there
    is no such curve, then this field is not present.
+
+ - **kxReuseECDH**: a boolean value, set to `true` if the server was
+   detected to reuse ECDH parameters (for ECDHE or ECDH\_anon cipher
+   suites). This field is present only if such a cipher suite is
+   supported by the server. Note that ECDH parameters reuse is not
+   guaranteed to be detected, especially in some load-balancing setups.
 
  - **namedCurves**: this field is an array that contains the list of
    named elliptic curves that the server supports. It is included only

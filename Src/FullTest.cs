@@ -422,6 +422,12 @@ class FullTest {
 				maxECVersion = v;
 				suppEC = ecs;
 			}
+			if (scs.KXReuseDH) {
+				rp.KXReuseDH = true;
+			}
+			if (scs.KXReuseECDH) {
+				rp.KXReuseECDH = true;
+			}
 
 			/*
 			 * Check V2 format for ClientHello.
@@ -457,7 +463,7 @@ class FullTest {
 			namedCurves = new SortedDictionary<int, SSLCurve>();
 			tb.MaxVersion = maxECVersion;
 			tb.SupportedCurves = null;
-			spontaneousEC = GetSupportedCipherSuites(suppEC);
+			spontaneousEC = GetSupportedCipherSuites(suppEC, null);
 			spontaneousNamedCurves = M.ToValueArray(namedCurves);
 			foreach (int s in namedCurves.Keys) {
 				oldNamedCurves[s] = namedCurves[s];
@@ -736,6 +742,19 @@ class FullTest {
 		}
 
 		/*
+		 * We accumulate hashes of server key exchange parameters
+		 * in this map, for DHE/DH_anon and ECDHE/ECDH_anon. This
+		 * is used to detect duplicates, i.e. parameter reuse. The
+		 * dictionary maps the hash value to an integer whose
+		 * upper 16 bits are the cipher suite last associated with
+		 * these parameters, and the lower 16 bits are the number
+		 * of times these parameters occurred.
+		 */
+		IDictionary<string, uint> kxHashes =
+			new SortedDictionary<string, uint>(
+				StringComparer.Ordinal);
+
+		/*
 		 * 1. Gather all cipher suites supported by the server.
 		 */
 		IDictionary<int, int> suppd = new SortedDictionary<int, int>();
@@ -745,7 +764,9 @@ class FullTest {
 			for (int j = 0; j < k; j ++) {
 				tt[j] = csl[i + j];
 			}
-			foreach (int s in GetSupportedCipherSuites(tt)) {
+			foreach (int s in
+				GetSupportedCipherSuites(tt, kxHashes))
+			{
 				AddToSet(suppd, s);
 			}
 		}
@@ -772,12 +793,14 @@ class FullTest {
 		 * the server selection algorithm is deemed "complex".
 		 */
 		if (supp.Length <= num) {
-			int[] supp1 = GetSupportedCipherSuites(supp);
+			int[] supp1 = GetSupportedCipherSuites(
+				supp, kxHashes);
 			int[] suppRev = new int[supp1.Length];
 			for (int i = 0; i < supp1.Length; i ++) {
 				suppRev[i] = supp[supp1.Length - 1 - i];
 			}
-			int[] supp2 = GetSupportedCipherSuites(suppRev);
+			int[] supp2 = GetSupportedCipherSuites(
+				suppRev, kxHashes);
 
 			if (M.Equals(supp2, suppRev)) {
 				scs.PrefClient = true;
@@ -786,6 +809,26 @@ class FullTest {
 				scs.Suites = supp1;
 			}
 		}
+
+		/*
+		 * See if there was some parameter reuse.
+		 */
+		foreach (uint v in kxHashes.Values) {
+			if ((v & 0xFFFF) == 1) {
+				continue;
+			}
+			int w = (int)(v >> 16);
+			CipherSuite cs;
+			if (!CipherSuite.ALL.TryGetValue(w, out cs)) {
+				continue;
+			}
+			if (cs.IsDHE) {
+				scs.KXReuseDH = true;
+			} else if (cs.IsECDHE) {
+				scs.KXReuseECDH = true;
+			}
+		}
+
 		if (verbose) {
 			Console.WriteLine();
 		}
@@ -811,7 +854,8 @@ class FullTest {
 	 * maximum version supported by the client, then the cipher
 	 * suite is deemed NOT supported.
 	 */
-	int[] GetSupportedCipherSuites(int[] suites)
+	int[] GetSupportedCipherSuites(int[] suites,
+		IDictionary<string, uint> kxHashes)
 	{
 		IDictionary<int, int> d = new SortedDictionary<int, int>();
 		foreach (int s in suites) {
@@ -839,6 +883,18 @@ class FullTest {
 			}
 			if (!tr.CipherSuiteInClientList) {
 				break;
+			}
+			string kxh = tr.KXHash;
+			if (kxh != null && kxHashes != null) {
+				if (kxHashes.ContainsKey(kxh)) {
+					uint v = kxHashes[kxh];
+					kxHashes[kxh] =
+						(uint)((v & 0xFFFF) + 1)
+						+ ((uint)u << 16);
+				} else {
+					kxHashes[kxh] =
+						(uint)1 + ((uint)u << 16);
+				}
 			}
 			d.Remove(u);
 			if (d.Count == 0) {
@@ -941,10 +997,17 @@ class FullTest {
 		}
 	}
 
-	static void AddToSet<T>(IDictionary<T, int> s, T val)
+	/*
+	 * Add a value to a set. This returns true if the value was
+	 * indeed added, false otherwise.
+	 */
+	static bool AddToSet<T>(IDictionary<T, int> s, T val)
 	{
 		if (!s.ContainsKey(val)) {
 			s.Add(val, 0);
+			return true;
+		} else {
+			return false;
 		}
 	}
 

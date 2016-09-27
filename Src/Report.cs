@@ -279,6 +279,32 @@ class Report {
 	}
 
 	/*
+	 * Set to true if the server was detected to reuse DH parameters
+	 * (for DHE or DH_anon).
+	 */
+	internal bool KXReuseDH {
+		get {
+			return kxReuseDH;
+		}
+		set {
+			kxReuseDH = value;
+		}
+	}
+
+	/*
+	 * Set to true if the server was detected to reuse ECDH parameters
+	 * (for ECDHE or ECDH_anon).
+	 */
+	internal bool KXReuseECDH {
+		get {
+			return kxReuseECDH;
+		}
+		set {
+			kxReuseECDH = value;
+		}
+	}
+
+	/*
 	 * Set to true if one ServerKeyExchange message (at least) could
 	 * not be fully decoded.
 	 */
@@ -344,6 +370,8 @@ class Report {
 	SSLCurve[] spontaneousNamedCurves;
 	int curveExplicitPrime;
 	int curveExplicitChar2;
+	bool kxReuseDH;
+	bool kxReuseECDH;
 	bool unknownSKE;
 
 	IDictionary<string, string> warnings;
@@ -640,6 +668,8 @@ class Report {
 			helloV2 ? "yes" : "no");
 		if (minDHSize > 0) {
 			w.WriteLine("Minimum DH size: {0}", minDHSize);
+			w.WriteLine("DH parameter reuse: {0}",
+				kxReuseDH ? "yes" : " no");
 		}
 		if (minECSize > 0) {
 			w.WriteLine("Minimum EC size (no extension):   {0}",
@@ -652,6 +682,10 @@ class Report {
 				w.WriteLine("Server does not use EC without"
 					+ " the client extension");
 			}
+		}
+		if (minECSize > 0 || minECSizeExt > 0) {
+			w.WriteLine("ECDH parameter reuse: {0}",
+				kxReuseECDH ? "yes" : " no");
 		}
 		if (namedCurves != null && namedCurves.Length > 0) {
 			w.WriteLine("Supported curves (size and name)"
@@ -831,12 +865,16 @@ class Report {
 		js.AddPair("ssl2HelloFormat", helloV2);
 		if (minDHSize > 0) {
 			js.AddPair("minDHSize", minDHSize);
+			js.AddPair("kxReuseDH", kxReuseDH);
 		}
 		if (minECSize > 0) {
 			js.AddPair("minECSize", minECSize);
 		}
 		if (minECSizeExt > 0) {
 			js.AddPair("minECSizeExt", minECSizeExt);
+		}
+		if (minECSize > 0 || minECSizeExt > 0) {
+			js.AddPair("kxReuseECDH", kxReuseECDH);
 		}
 
 		if ((namedCurves != null && namedCurves.Length > 0)

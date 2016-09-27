@@ -159,6 +159,19 @@ class SSLTestResult {
 	}
 
 	/*
+	 * Get the SHA-1 hash of the key exchange parameters sent by the
+	 * server (DHE or ECDHE, excluding any signature by the server;
+	 * also applies to DH_anon and ECDH_anon). The hash value is
+	 * converted to lowercase hexadecimal. This is null if the
+	 * server did not send such parameters.
+	 */
+	internal string KXHash {
+		get {
+			return kxHash;
+		}
+	}
+
+	/*
 	 * Get the curve used for an ECDHE key exchange (also applies to
 	 * ECDH_anon). This is set only if a named curved was used, and
 	 * the curve was recognized; otherwise, this property returns
@@ -202,6 +215,7 @@ class SSLTestResult {
 	byte[][] certificateChain;
 	int dhSize;
 	int ecSize;
+	string kxHash;
 	bool curveExplicitPrime;
 	bool curveExplicitChar2;
 	SSLCurve curve;
@@ -395,8 +409,8 @@ class SSLTestResult {
 			 */
 			byte[] p = hm.ReadBlobVar(2);
 			dhSize = M.BitLength(p);
-			hm.ReadBlobVar(2);
-			hm.ReadBlobVar(2);
+			byte[] g = hm.ReadBlobVar(2);
+			byte[] y = hm.ReadBlobVar(2);
 			if (cs.ServerKeyType != "none") {
 				if (version >= M.TLSv12) {
 					/*
@@ -406,6 +420,8 @@ class SSLTestResult {
 				}
 				hm.ReadBlobVar(2);
 			}
+
+			kxHash = M.DoSHA1Values(0, p, g, y);
 		} else if (cs.IsECDHE) {
 			/*
 			 * If this is ECDHE_PSK, then there is first a
@@ -416,20 +432,36 @@ class SSLTestResult {
 			}
 
 			/*
+			 * Curve elements.
+			 */
+			int id = 0;
+			byte[] p = null;
+			byte[] bf1 = null;
+			byte[] bf2 = null;
+			byte[] bf3 = null;
+			byte[] a = null;
+			byte[] b = null;
+			byte[] G = null;
+			byte[] order = null;
+			byte[] cofactor = null;
+
+			/*
 			 * Read curve type: one byte.
 			 */
-			switch (hm.Read1()) {
+			int ptype = hm.Read1();
+			switch (ptype) {
 			case 1:
 				/*
 				 * explicit_prime: p, a, b, G,
 				 * order, cofactor.
 				 */
-				hm.ReadBlobVar(1);
-				hm.ReadBlobVar(1);
-				hm.ReadBlobVar(1);
-				hm.ReadBlobVar(1);
-				ecSize = M.AdjustedBitLength(hm.ReadBlobVar(1));
-				hm.ReadBlobVar(1);
+				p = hm.ReadBlobVar(1);
+				a = hm.ReadBlobVar(1);
+				b = hm.ReadBlobVar(1);
+				G = hm.ReadBlobVar(1);
+				order = hm.ReadBlobVar(1);
+				ecSize = M.AdjustedBitLength(order);
+				cofactor = hm.ReadBlobVar(1);
 				curveExplicitPrime = true;
 				break;
 			case 2:
@@ -438,31 +470,32 @@ class SSLTestResult {
 				switch (hm.Read1()) {
 				case 1:
 					/* trinomial */
-					hm.ReadBlobVar(1);
+					bf1 = hm.ReadBlobVar(1);
 					break;
 				case 2:
 					/* pentanomial */
-					hm.ReadBlobVar(1);
-					hm.ReadBlobVar(1);
-					hm.ReadBlobVar(1);
+					bf1 = hm.ReadBlobVar(1);
+					bf2 = hm.ReadBlobVar(1);
+					bf3 = hm.ReadBlobVar(1);
 					break;
 				default:
 					hm.Close(true);
 					unknownSKE = true;
 					return;
 				}
-				hm.ReadBlobVar(1);
-				hm.ReadBlobVar(1);
-				hm.ReadBlobVar(1);
-				ecSize = M.AdjustedBitLength(hm.ReadBlobVar(1));
-				hm.ReadBlobVar(1);
+				a = hm.ReadBlobVar(1);
+				b = hm.ReadBlobVar(1);
+				G = hm.ReadBlobVar(1);
+				order = hm.ReadBlobVar(1);
+				ecSize = M.AdjustedBitLength(order);
+				cofactor = hm.ReadBlobVar(1);
 				curveExplicitChar2 = true;
 				break;
 			case 3:
 				/*
 				 * named_curve.
 				 */
-				int id = hm.Read2();
+				id = hm.Read2();
 				if (SSLCurve.ALL.TryGetValue(id, out curve)) {
 					ecSize = curve.Size;
 				} else {
@@ -481,7 +514,7 @@ class SSLTestResult {
 			/*
 			 * Read public key: one curve point.
 			 */
-			hm.ReadBlobVar(1);
+			byte[] Q = hm.ReadBlobVar(1);
 			if (cs.ServerKeyType != "none") {
 				if (version >= M.TLSv12) {
 					/*
@@ -491,6 +524,10 @@ class SSLTestResult {
 				}
 				hm.ReadBlobVar(2);
 			}
+
+			kxHash = M.DoSHA1Values(1, ptype, id,
+				p, bf1, bf2, bf3,
+				a, b, G, order, cofactor, Q);
 		} else if (cs.IsRSAExport) {
 			/*
 			 * If cipher suite uses RSA key exchange and is
@@ -501,8 +538,8 @@ class SSLTestResult {
 			 *
 			 * Format: modulus, public exponent, signature.
 			 */
-			hm.ReadBlobVar(2);
-			hm.ReadBlobVar(2);
+			byte[] modulus = hm.ReadBlobVar(2);
+			byte[] exponent = hm.ReadBlobVar(2);
 			if (version >= M.TLSv12) {
 				/*
 				 * Hash-and-sign identifiers.
@@ -510,15 +547,19 @@ class SSLTestResult {
 				hm.Read2();
 			}
 			hm.ReadBlobVar(2);
+			kxHash = M.DoSHA1Values(2, modulus, exponent);
 		} else if (cs.IsSRP) {
 			/*
 			 * SRP parameters are: N, g, s, B. N is the
 			 * modulus.
 			 */
-			dhSize = M.BitLength(hm.ReadBlobVar(2));
-			hm.ReadBlobVar(2);
-			hm.ReadBlobVar(1);
-			hm.ReadBlobVar(2);
+			byte[] N = hm.ReadBlobVar(2);
+			dhSize = M.BitLength(N);
+			byte[] g = hm.ReadBlobVar(2);
+			byte[] s = hm.ReadBlobVar(1);
+			byte[] B = hm.ReadBlobVar(2);
+
+			kxHash = M.DoSHA1Values(3, N, g, s, B);
 
 			/*
 			 * RFC 5054 says that there is a signature,
