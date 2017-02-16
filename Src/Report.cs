@@ -150,6 +150,21 @@ class Report {
 	}
 
 	/*
+	 * Set to true if the server appears to support the Encrypt-then-MAC
+	 * extension (RFC 7366). This is only about the extension, _not_
+	 * cipher suites that are "natively" in Encrypt-then-MAC mode (e.g.
+	 * AES/GCM and ChaCha20+Poly1305 cipher suites).
+	 */
+	internal bool SupportsEncryptThenMAC {
+		get {
+			return doesEtM;
+		}
+		set {
+			doesEtM = value;
+		}
+	}
+
+	/*
 	 * Set the server time offset (serverTime - clientTime), in
 	 * milliseconds.
 	 *
@@ -362,6 +377,7 @@ class Report {
 	bool compress;
 	long serverTimeOffset;
 	bool doesRenego;
+	bool doesEtM;
 	int minDHSize;
 	int minECSize;
 	int minECSizeExt;
@@ -664,6 +680,8 @@ class Report {
 		}
 		w.WriteLine("Secure renegotiation support: {0}",
 			doesRenego ? "yes" : "no");
+		w.WriteLine("Encrypt-then-MAC support (RFC 7366): {0}",
+			doesEtM ? "yes" : "no");
 		w.WriteLine("SSLv2 ClientHello format (for SSLv3+): {0}",
 			helloV2 ? "yes" : "no");
 		if (minDHSize > 0) {
@@ -862,6 +880,7 @@ class Report {
 				serverTimeOffset);
 		}
 		js.AddPair("secureRenegotiation", doesRenego);
+		js.AddPair("rfc7366EtM", doesEtM);
 		js.AddPair("ssl2HelloFormat", helloV2);
 		if (minDHSize > 0) {
 			js.AddPair("minDHSize", minDHSize);

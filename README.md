@@ -419,6 +419,15 @@ A single JSON object is produced. It contains the following fields:
  - **secureRenegotiation**: a boolean value, set to `true` if the server
    supports the Secure Renegotiation extension (RFC 5746).
 
+ - **rfc7366EtM**: a boolean value, set to `true` if the server supports
+   the Encrypt-then-MAC extension (RFC 7366). This extension is
+   nominally a good thing; however, OpenSSL versions 1.1.0a to 1.1.0d
+   are affected by a bug in which support of this extension allows a
+   denial-of-service attack. TestSSLServer does _not_ test for this
+   vulnerability, since, when present, it crashes the server. If
+   TestSSLServer reports support for the extension, then you should
+   check that the server does not use a vulnerable OpenSSL version.
+
  - **ssl2HelloFormat**: a boolean value, set to `true` if the server
    supports a ClientHello for SSLv3+ sent in SSLv2 format. Some old
    clients support for SSLv2 and SSLv3, and send the ClientHello in

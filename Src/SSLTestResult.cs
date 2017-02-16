@@ -92,6 +92,16 @@ class SSLTestResult {
 	}
 
 	/*
+	 * True if the server sends the Encrypt-then-MAC extension
+	 * (RFC 7366).
+	 */
+	internal bool DoesEtM {
+		get {
+			return doesEtM;
+		}
+	}
+
+	/*
 	 * Set to true if the server sent a ServerKeyExchange that we
 	 * could not understand.
 	 */
@@ -209,6 +219,7 @@ class SSLTestResult {
 	bool cipherSuiteInClientList;
 	bool deflateCompress;
 	byte[] renegInfo;
+	bool doesEtM;
 	bool unknownSKE;
 	bool failedAfterHello;
 	byte[] certificate;
@@ -278,6 +289,9 @@ class SSLTestResult {
 				case M.EXT_RENEGOTIATION_INFO:
 					ParseRenegInfo(sh);
 					break;
+				case M.EXT_ENCRYPT_THEN_MAC:
+					ParseEtM(sh);
+					break;
 				case M.EXT_SUPPORTED_CURVES:
 					ParseSupportedCurves(sh);
 					break;
@@ -339,6 +353,14 @@ class SSLTestResult {
 	void ParseRenegInfo(HMParser sh)
 	{
 		renegInfo = sh.ReadBlobVar(1);
+	}
+
+	void ParseEtM(HMParser sh)
+	{
+		/*
+		 * The Encrypt-then-MAC extension is supposed to be empty.
+		 */
+		doesEtM = true;
 	}
 
 	void ParseSupportedCurves(HMParser sh)

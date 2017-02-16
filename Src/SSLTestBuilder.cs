@@ -103,6 +103,18 @@ class SSLTestBuilder {
 	}
 
 	/*
+	 * If true, add the "encrypt-then-MAC" extension.
+	 */
+	internal bool EncryptThenMACExtension {
+		get {
+			return encryptThenMACExtension;
+		}
+		set {
+			encryptThenMACExtension = value;
+		}
+	}
+
+	/*
 	 * If not null and not empty, add the "supported elliptic curves"
 	 * extension with the provided named curves.
 	 */
@@ -160,6 +172,7 @@ class SSLTestBuilder {
 	bool fallbackSCSV;
 	bool renegotiationSCSV;
 	bool renegotiationExtension;
+	bool encryptThenMACExtension;
 	int[] supportedCurves;
 	bool deflateCompress;
 	string serverName;
@@ -193,6 +206,7 @@ class SSLTestBuilder {
 		sessionID = null;
 		renegotiationSCSV = false;
 		renegotiationExtension = true;
+		encryptThenMACExtension = true;
 		supportedCurves = null;
 	}
 
@@ -362,6 +376,23 @@ class SSLTestBuilder {
 		 */
 		HList exs = new HList(0xFFFF);
 
+		/*
+		 * With TLS 1.2, the "signature algorithms" extension is
+		 * _always_ included, even if all other extensions are
+		 * disabled.
+		 */
+		if (maxVersion >= M.TLSv12) {
+			M.Write2(exs, M.EXT_SIGNATURE_ALGORITHMS);
+			M.Write2(exs, 38);
+			M.Write2(exs, 36);
+			for (int s = 3; s >= 1; s --) {
+				for (int h = 6; h >= 1; h --) {
+					M.Write1(exs, h);
+					M.Write1(exs, s);
+				}
+			}
+		}
+
 		if (serverName != null) {
 			M.Write2(exs, M.EXT_SERVER_NAME);
 			HList sndata = new HList(0xFFFF);
@@ -377,6 +408,10 @@ class SSLTestBuilder {
 			M.Write2(exs, M.EXT_RENEGOTIATION_INFO);
 			M.Write2(exs, 1);
 			M.Write1(exs, 0);
+		}
+		if (encryptThenMACExtension) {
+			M.Write2(exs, M.EXT_ENCRYPT_THEN_MAC);
+			M.Write2(exs, 0);
 		}
 		if (supportedCurves != null && supportedCurves.Length > 0) {
 			M.Write2(exs, M.EXT_SUPPORTED_CURVES);

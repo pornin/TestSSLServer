@@ -35,6 +35,8 @@ class SSLRecord : Stream {
 	int inType;
 	int inExpectedType;
 
+	bool dumpBytes;
+
 	/*
 	 * Create an instance over the provided stream (normally a
 	 * network socket).
@@ -45,6 +47,16 @@ class SSLRecord : Stream {
 		outPtr = 5;
 		inPtr = 0;
 		inEnd = 0;
+		dumpBytes = false;
+	}
+
+	internal bool DumpBytes {
+		get {
+			return dumpBytes;
+		}
+		set {
+			dumpBytes = value;
+		}
 	}
 
 	public override bool CanRead { get { return true; } }
@@ -98,6 +110,12 @@ class SSLRecord : Stream {
 			outBuf[0] = (byte)outType;
 			M.Enc16be(outVersion, outBuf, 1);
 			M.Enc16be(outPtr - 5, outBuf, 3);
+			if (dumpBytes) {
+				Console.WriteLine(">>> record header");
+				Dump(outBuf, 0, 5);
+				Console.WriteLine(">>> record data");
+				Dump(outBuf, 5, outPtr - 5);
+			}
 			sub.Write(outBuf, 0, outPtr);
 			outPtr = 5;
 		}
@@ -148,6 +166,10 @@ class SSLRecord : Stream {
 	 */
 	internal void RawWrite(byte[] buf, int off, int len)
 	{
+		if (dumpBytes) {
+			Console.WriteLine(">>> raw write");
+			Dump(buf, off, len);
+		}
 		sub.Write(buf, off, len);
 	}
 
@@ -176,6 +198,10 @@ class SSLRecord : Stream {
 	{
 		for (;;) {
 			M.ReadFully(sub, inBuf, 0, 5);
+			if (dumpBytes) {
+				Console.WriteLine("<<< record header");
+				Dump(inBuf, 0, 5);
+			}
 			inType = inBuf[0];
 			int v = M.Dec16be(inBuf, 1);
 			inEnd = M.Dec16be(inBuf, 3);
@@ -201,6 +227,10 @@ class SSLRecord : Stream {
 					inType));
 			}
 			M.ReadFully(sub, inBuf, 0, inEnd);
+			if (dumpBytes) {
+				Console.WriteLine("<<< record data");
+				Dump(inBuf, 0, inEnd);
+			}
 			inPtr = 0;
 			if (inType == M.ALERT) {
 				for (int k = 0; k < inEnd; k += 2) {
@@ -235,5 +265,19 @@ class SSLRecord : Stream {
 		Array.Copy(inBuf, inPtr, buf, off, clen);
 		inPtr += clen;
 		return clen;
+	}
+
+	static void Dump(byte[] buf, int off, int len)
+	{
+		for (int i = 0; i < len; i += 16) {
+			Console.Write("  {0:x8} ", i);
+			for (int j = 0; j < 16 && (i + j) < len; j ++) {
+				if (j == 8) {
+					Console.Write(" ");
+				}
+				Console.Write(" {0:x2}", buf[off + i + j]);
+			}
+			Console.WriteLine();
+		}
 	}
 }

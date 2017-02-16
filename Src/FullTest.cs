@@ -201,6 +201,7 @@ class FullTest {
 	int curveExplicitChar2;
 	bool unknownSKE;
 	bool doesRenego;
+	bool doesEtM;
 
 	internal FullTest()
 	{
@@ -246,6 +247,7 @@ class FullTest {
 		curveExplicitChar2 = 0;
 		unknownSKE = false;
 		doesRenego = false;
+		doesEtM = false;
 
 		/*
 		 * Overall process:
@@ -535,6 +537,7 @@ class FullTest {
 		rp.DeflateCompress = serverCompress;
 		rp.ServerTimeOffset = GetServerTimeOffset();
 		rp.SupportsSecureRenegotiation = doesRenego;
+		rp.SupportsEncryptThenMAC = doesEtM;
 		rp.MinDHSize = minDHSize;
 		rp.MinECSize = minECSize;
 		rp.MinECSizeExt = minECSizeExt;
@@ -668,6 +671,9 @@ class FullTest {
 					}
 					if (tr.RenegotiationInfo != null) {
 						doesRenego = true;
+					}
+					if (tr.DoesEtM) {
+						doesEtM = true;
 					}
 				}
 				return tr;

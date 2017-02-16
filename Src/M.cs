@@ -53,6 +53,9 @@ class M {
 	/* From RFC 5746 */
 	internal const int EXT_RENEGOTIATION_INFO      = 0xFF01;
 
+	/* From RFC 7366 */
+	internal const int EXT_ENCRYPT_THEN_MAC        = 0x0016;
+
 	internal static void Enc16be(int val, byte[] buf, int off)
 	{
 		buf[off] = (byte)(val >> 8);
