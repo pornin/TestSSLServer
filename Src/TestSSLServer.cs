@@ -308,6 +308,10 @@ class TestSSLServer {
 				vs = vs.Substring(1).Trim();
 			}
 			switch (vs) {
+			case "2":
+			case "20":
+			case "2.0":
+				return M.SSLv20;
 			case "3":
 			case "30":
 			case "3.0":

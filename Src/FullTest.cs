@@ -274,6 +274,7 @@ class FullTest {
 		rp.ConnName = serverName;
 		rp.ConnPort = serverPort;
 		rp.SNI = sni;
+		bool hasSSLv2 = false;
 
 		/*
 		 * SSL 2.0 attempt.
@@ -288,6 +289,9 @@ class FullTest {
 					Console.WriteLine("[SSLv2 supported,"
 						+ " {0} cipher suite(s)]",
 						v2.CipherSuites.Length);
+				}
+				if (v2.CipherSuites.Length > 0) {
+					hasSSLv2 = true;
 				}
 			}
 		}
@@ -346,6 +350,14 @@ class FullTest {
 		 * we try again the whole process without extensions.
 		 */
 		for (;;) {
+			if (maxVersion < M.SSLv30) {
+				if (!hasSSLv2) {
+					throw new Exception(
+						"No SSLv2 support, not"
+						+ " testing higher versions");
+				}
+				break;
+			}
 			maxRecordLen = 8192;
 			if (TryConnect() || gotReadTimeout) {
 				break;
