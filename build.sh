@@ -1,6 +1,6 @@
 #! /bin/sh
 
-CSC=$(which mono-csc || which dmcs || echo "none")
+CSC=$(which mono-csc || which dmcs || which mcs || echo "none")
 
 if [ $CSC = "none" ]; then
 	echo "Error: Please install mono-devel."
