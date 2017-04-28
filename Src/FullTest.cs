@@ -26,6 +26,18 @@ class FullTest {
 	}
 
 	/*
+	 * Debug log stream (can be null for no debug log).
+	 */
+	internal TextWriter DebugLog {
+		get {
+			return debugLog;
+		}
+		set {
+			debugLog = value;
+		}
+	}
+
+	/*
 	 * Minimum SSL/TLS version to test. Defaults to 0.
 	 */
 	internal int MinVersion {
@@ -170,6 +182,7 @@ class FullTest {
 	}
 
 	bool verbose;
+	TextWriter debugLog;
 	int minVersion;
 	int maxVersion;
 	string serverName;
@@ -658,6 +671,10 @@ class FullTest {
 				rns.RTimeout = readTimeout;
 				ns = rns;
 			}
+			if (debugLog != null) {
+				debugLog.WriteLine("===========================================================================");
+				ns = new DebugStream(ns, debugLog);
+			}
 			try {
 				bool hasECExt = tb.SupportedCurves != null
 					&& tb.SupportedCurves.Length > 0;
@@ -724,6 +741,10 @@ class FullTest {
 				RTStream rns = new RTStream(ns);
 				rns.RTimeout = readTimeout;
 				ns = rns;
+			}
+			if (debugLog != null) {
+				debugLog.WriteLine("===========================================================================");
+				ns = new DebugStream(ns, debugLog);
 			}
 			SSL2 v2 = SSL2.TestServer(ns);
 			if (v2 != null) {

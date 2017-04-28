@@ -39,6 +39,8 @@ class TestSSLServer {
 "  -text fname       write text report in file 'fname' ('-' = stdout)");
 		Console.WriteLine(
 "  -json fname       write JSON report in file 'fname' ('-' = stdout)");
+		Console.WriteLine(
+"  -log fname        write debug log in file 'fname' ('-' = stdout)");
 		Environment.Exit(1);
 	}
 
@@ -60,6 +62,7 @@ class TestSSLServer {
 		string proxString = null;
 		string textOut = null;
 		string jsonOut = null;
+		string logName = null;
 		int rtm = 20000;
 		ft.AddECExt = true;
 		for (int i = 0; i < args.Length; i ++) {
@@ -162,6 +165,13 @@ class TestSSLServer {
 				}
 				jsonOut = args[i];
 				break;
+			case "-log":
+			case "--log-output":
+				if (++ i >= args.Length) {
+					Usage();
+				}
+				logName = args[i];
+				break;
 			default:
 				if (a.Length > 0 && a[0] == '-') {
 					Usage();
@@ -249,6 +259,14 @@ class TestSSLServer {
 			textOut = "-";
 		}
 
+		if (logName != null) {
+			if (logName == "-") {
+				ft.DebugLog = Console.Out;
+			} else {
+				ft.DebugLog = File.CreateText(logName);
+			}
+		}
+
 		Report rp = ft.Run();
 		rp.ShowCertPEM = withCerts;
 
@@ -272,6 +290,13 @@ class TestSSLServer {
 				{
 					rp.Print(new JSON(w));
 				}
+			}
+		}
+
+		if (logName != null) {
+			ft.DebugLog.Flush();
+			if (logName != "-") {
+				ft.DebugLog.Close();
 			}
 		}
 	}
