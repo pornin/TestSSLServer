@@ -198,6 +198,11 @@ Options are:
    If neither `-text` nor `-json` is used, the text report will be
    written on standard output.
 
+ - `-log fname`
+
+   Produce a text-based log of all connection attempts (hexadecimal dump
+   of all bytes in both directions) in the specified file.
+
 For example, to make a text report in file "test.txt" for server
 "www.example.com" on port 443, use:
 
