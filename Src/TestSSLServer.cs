@@ -28,6 +28,8 @@ class TestSSLServer {
 		Console.WriteLine(
 "  -t delay          set read timeout (in seconds) for non-SSL detection");
 		Console.WriteLine(
+"  -w millis         set extra delay (in milliseconds) before each connection");
+		Console.WriteLine(
 "  -prox name:port   connect through HTTP proxy");
 		Console.WriteLine(
 "  -proxssl          use SSL/TLS to connect to proxy");
@@ -64,6 +66,7 @@ class TestSSLServer {
 		string jsonOut = null;
 		string logName = null;
 		int rtm = 20000;
+		int cwait = 0;
 		ft.AddECExt = true;
 		for (int i = 0; i < args.Length; i ++) {
 			string a = args[i];
@@ -130,6 +133,18 @@ class TestSSLServer {
 					rtm = -1;
 				} else {
 					rtm *= 1000;
+				}
+				break;
+			case "-w":
+			case "--wait":
+				if (++ i >= args.Length) {
+					Usage();
+				}
+				if (!Int32.TryParse(args[i], out cwait)) {
+					Usage();
+				}
+				if (cwait <= 0) {
+					cwait = 0;
 				}
 				break;
 			case "-prox":
@@ -238,6 +253,7 @@ class TestSSLServer {
 		}
 
 		ft.ReadTimeout = rtm;
+		ft.ConnectionWait = cwait;
 		if (proxString != null) {
 			int j = proxString.IndexOf(':');
 			if (j > 0) {
