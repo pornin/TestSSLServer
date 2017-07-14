@@ -5,6 +5,7 @@ using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 
 /*
  * A FullTest instance gathers configuration for the tests, and maintains
@@ -181,6 +182,20 @@ class FullTest {
 		}
 	}
 
+	/*
+	 * The extra wait delay before each connection, in milliseconds.
+	 * Default is 0. Adding a delay can help with some servers that
+	 * don't tolerate well connection attempts in fast succession.
+	 */
+	internal int ConnectionWait {
+		get {
+			return connectionWait;
+		}
+		set {
+			connectionWait = value;
+		}
+	}
+
 	bool verbose;
 	TextWriter debugLog;
 	int minVersion;
@@ -194,6 +209,7 @@ class FullTest {
 	int proxPort;
 	bool proxSSL;
 	int readTimeout;
+	int connectionWait;
 
 	Report rp;
 	SSLTestBuilder tb;
@@ -226,6 +242,7 @@ class FullTest {
 		explicitSNI = null;
 		allSuites = false;
 		readTimeout = -1;
+		connectionWait = 0;
 		proxName = null;
 		proxPort = 3128;
 		proxSSL = false;
@@ -458,9 +475,18 @@ class FullTest {
 
 			/*
 			 * Check V2 format for ClientHello.
+			 * We set cipher suites to the list of suites
+			 * that the server supports. The list may be
+			 * truncated (because some servers don't support
+			 * V2 ClientHello longer than 127 bytes) so we need
+			 * to put non-EC suites first: some servers will not
+			 * accept EC suites when there is no "supported
+			 * curves" extension, and the V2 ClientHello message
+			 * does not have room for extensions.
 			 */
 			int savedRV = tb.RecordVersion;
 			tb.RecordVersion = M.SSLv20;
+			tb.CipherSuites = scs.GetKnownSuitesLowEC();
 			if (DoConnect() != null) {
 				rp.SupportsV2Hello = true;
 			}
@@ -577,6 +603,10 @@ class FullTest {
 
 	Stream OpenConnection()
 	{
+		if (connectionWait > 0) {
+			Thread.Sleep(connectionWait);
+		}
+
 		if (proxName == null) {
 			TcpClient tc = new TcpClient(serverName, serverPort);
 			return tc.GetStream();

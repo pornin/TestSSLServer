@@ -82,6 +82,36 @@ class SupportedCipherSuites {
 		return r.ToArray();
 	}
 
+	/*
+	 * Get the supported cipher suites, with the non-EC suites
+	 * put first in the list.
+	 */
+	internal int[] GetKnownSuitesLowEC()
+	{
+		List<int>r = new List<int>();
+		for (int i = 0; i < 3; i ++) {
+			foreach (int s in suites) {
+				CipherSuite cs;
+				if (!CipherSuite.ALL.TryGetValue(s, out cs)) {
+					if (i == 2) {
+						r.Add(s);
+						continue;
+					}
+				}
+				if (cs.IsECDHE) {
+					if (i == 1) {
+						r.Add(s);
+					}
+				} else {
+					if (i == 0) {
+						r.Add(s);
+					}
+				}
+			}
+		}
+		return r.ToArray();
+	}
+
 	internal bool Equals(SupportedCipherSuites scs)
 	{
 		if (scs == null) {
