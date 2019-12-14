@@ -562,8 +562,17 @@ class Report {
 			foreach (string sh in shs) {
 				switch (sh) {
 				case "MD2":
+					hasBadSignHash = true;
+					break;
+				case "MD4":
+					hasBadSignHash = true;
+					break;
 				case "MD5":
+					hasBadSignHash = true;
+					break;
 				case "SHA-1":
+					hasBadSignHash = true;
+					break;
 				case "UNKNOWN":
 					hasBadSignHash = true;
 					break;
