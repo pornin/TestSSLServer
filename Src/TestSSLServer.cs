@@ -38,6 +38,8 @@ class TestSSLServer {
 		Console.WriteLine(
 "  -noec             try connecting without a 'supported curves' extension");
 		Console.WriteLine(
+"  -st protocol      negotiate TLS connection (FTP, SMTP)");
+		Console.WriteLine(
 "  -text fname       write text report in file 'fname' ('-' = stdout)");
 		Console.WriteLine(
 "  -json fname       write JSON report in file 'fname' ('-' = stdout)");
@@ -186,6 +188,13 @@ class TestSSLServer {
 					Usage();
 				}
 				logName = args[i];
+				break;
+			case "-st":
+			case "--start-tls":
+				if (++ i >= args.Length) {
+					Usage();
+				}
+				ft.StartTls = args[i].ToUpperInvariant();
 				break;
 			default:
 				if (a.Length > 0 && a[0] == '-') {
