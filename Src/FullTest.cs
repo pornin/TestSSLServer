@@ -196,6 +196,15 @@ class FullTest {
 		}
 	}
 
+	internal string StartTls {
+		get {
+			return startTls;
+		}
+		set {
+			startTls = value;
+		}
+	}
+
 	bool verbose;
 	TextWriter debugLog;
 	int minVersion;
@@ -210,6 +219,7 @@ class FullTest {
 	bool proxSSL;
 	int readTimeout;
 	int connectionWait;
+	string startTls;
 
 	Report rp;
 	SSLTestBuilder tb;
@@ -601,6 +611,40 @@ class FullTest {
 		return rp;
 	}
 
+	Stream PrepareStream(Stream stream)
+	{
+		if (startTls != null) {
+			StreamReader r = new StreamReader(stream);
+			StreamWriter w = new StreamWriter(stream);
+			switch (startTls) {
+				case "FTP":
+					w.AutoFlush = true;
+					r.ReadLine();
+					w.WriteLine("AUTH TLS");
+					r.ReadLine();
+					break;
+				case "SMTP":
+					w.AutoFlush = true;
+					string response;
+					do {response = r.ReadLine();} while (response[3] == '-');
+					w.WriteLine("EHLO TestSSLServer");
+					bool TlsEnabled = false;
+					do {
+						response = r.ReadLine();
+						TlsEnabled |= response.EndsWith("STARTTLS");
+					} while (response[3] == '-');
+					if (TlsEnabled)
+					{
+						w.WriteLine("STARTTLS");
+						do { response = r.ReadLine(); } while (response[3] == '-');
+					}
+					else throw new InvalidOperationException("TLS not supported");
+					break;
+			}
+		}
+		return stream;
+	}
+
 	Stream OpenConnection()
 	{
 		if (connectionWait > 0) {
@@ -609,7 +653,7 @@ class FullTest {
 
 		if (proxName == null) {
 			TcpClient tc = new TcpClient(serverName, serverPort);
-			return tc.GetStream();
+			return PrepareStream(tc.GetStream());
 		}
 
 		Stream ns = null;
@@ -624,7 +668,7 @@ class FullTest {
 			HTTPProx hp = new HTTPProx();
 			Stream ns2 = hp.DoProxy(ns, serverName, serverPort);
 			ns = null;
-			return ns2;
+			return PrepareStream(ns2);
 		} finally {
 			if (ns != null) {
 				try {

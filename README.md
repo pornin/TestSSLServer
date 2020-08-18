@@ -181,6 +181,11 @@ Options are:
    Using this extension may miss some supported cipher suites, if the
    server does not support EC-based suites without the client extension.
 
+ - `-st protocol`
+
+   Negotiate TLS on ports that do not have always-on TLS. The supported
+   protocols at this time ar `FTP` and `SMTP`.
+
  - `-text fname`
 
    Produce a text report (readable by humans) into the designated
