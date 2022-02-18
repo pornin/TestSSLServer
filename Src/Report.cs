@@ -471,6 +471,12 @@ class Report {
 		}
 		if (suites.ContainsKey(M.SSLv30)) {
 			warnings["PV003"] = "Server supports SSL 3.0.";
+                }
+                if (suites.ContainsKey(M.TLSv10)) {
+                        warnings["PV006"] = "Server supports TLS 1.0.";
+                }
+                if (suites.ContainsKey(M.TLSv11)) {
+                        warnings["PV007"] = "Server supports TLS 1.1.";
 		}
 		if (unknownSKE) {
 			warnings["SK001"] = "Some Server Key Exchange messages"
