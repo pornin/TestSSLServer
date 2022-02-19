@@ -586,6 +586,21 @@ of some kind.
    support SSL 2.0, it merely claims to do so. Some other SSL scanning
    tools wrongly indicate this occurrence as "supports SSL 2.0", which
    is why this warning is included.
+   
+   - **PV006**
+
+   TLS 1.0 is deprecated as of March 2021. It has known flaws.
+   Recent clients and servers support TLS 1.2 and later and 
+   use a fallback mechanism to prevent attackers from forcing your 
+   brower to fallback to TLS 1.0. It is recomended to disable TLS 1.0 support.
+   
+   - **PV007**
+
+TLS 1.1 is deprecated as of March 2021. It has no known flaws
+but we don't want to take any risks. Recent clients and servers 
+support TLS 1.2 and later and use a fallback mechanism to 
+prevent attackers from forcing your browser back to fall back to TLS 1.1.
+It is recommended to disable TLS 1.1 spport.
 
  - **RN001**: Server does not support secure renegotiation.
 
